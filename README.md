@@ -3,6 +3,17 @@
 1. Set `L1_RPC_URL` in `up.sh`
 2. Run `make up`.
 
+## Latest snapshot
+https://constellationlabs-dashboard-beta.s3.amazonaws.com/manta-testnet-12-05-2025.tar.gz
+
+# Commands:
+
+```
+make up
+make down
+make clean
+```
+
 To query the RPC:
 
 ```
@@ -20,11 +31,3 @@ curl $RPC_URL -X POST -H "Content-Type: application/json" --data \
 ```
 
 or `bash progress.sh`
-
-# Commands:
-
-```
-make up
-make down
-make clean
-```

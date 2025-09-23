@@ -28,7 +28,7 @@ services:
   op-node:
     depends_on:
       - l2
-    image: "public.ecr.aws/i6b2w2n6/op-node:6.0.1"
+    image: "public.ecr.aws/i6b2w2n6/op-node:6.2.0"
     platform: linux/amd64
     stop_signal: SIGINT
     stop_grace_period: 30s
@@ -41,6 +41,7 @@ services:
       OP_NODE_OVERRIDE_CANYON: '1726610400'
       OP_NODE_OVERRIDE_DELTA: '1726610400'
       OP_NODE_OVERRIDE_ECOTONE: '1726610400'
+      OP_NODE_OVERRIDE_PECTRABLOBSCHEDULE: '1758812611'
 
     restart: always
     command: >

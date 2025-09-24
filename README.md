@@ -3,7 +3,7 @@
 1. Set `L1_RPC_URL` in `up.sh`
 2. Run `make up`.
 
-## Latest snapshot
+# Latest snapshot
 https://constellationlabs-dashboard-beta.s3.amazonaws.com/manta-testnet-12-05-2025.tar.gz
 
 # Commands:
@@ -31,3 +31,6 @@ curl $RPC_URL -X POST -H "Content-Type: application/json" --data \
 ```
 
 or `bash progress.sh`
+
+# Celestia upgrades
+Please refer to celestia docs for network upgrades: https://docs.celestia.org/how-to-guides/participate#network-upgrades

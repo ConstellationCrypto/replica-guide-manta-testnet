@@ -25,5 +25,10 @@
     "regolith_time": 0,
     "batch_inbox_address": "0x1e59a308bafad671f63ba5d440489f0a84bf0f7c",
     "deposit_contract_address": "0x80f86c5d3ae8cf84596ff22db2829f1b7a9fe83d",
-    "l1_system_config_address": "0x5ba649a9aabc847cdf498d41113da7701569fc47"
+    "l1_system_config_address": "0x5ba649a9aabc847cdf498d41113da7701569fc47",
+    "chain_op_config": {
+        "eip1559Elasticity": 6,
+        "eip1559Denominator": 50,
+        "eip1559DenominatorCanyon": 250
+    }
 }

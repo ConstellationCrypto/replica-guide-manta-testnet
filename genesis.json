@@ -17,6 +17,8 @@
         "mergeNetsplitBlock": 0,
         "bedrockBlock": 0,
         "regolithTime": 0,
+        "canyonTime": 1726610400,
+        "ecotoneTime": 1726610400,
         "terminalTotalDifficulty": 0,
         "terminalTotalDifficultyPassed": true,
         "optimism": {

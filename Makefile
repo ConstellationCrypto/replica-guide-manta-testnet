@@ -10,3 +10,11 @@ clean: down
 	docker image ls 'replica*' --format='{{.Repository}}' | xargs -r docker rmi
 	docker volume ls --filter name='replica-guide' --format='{{.Name}}' | xargs -r docker volume rm
 .PHONY: clean
+
+reth-up:
+	@bash ./reth-up.sh
+.PHONY: reth-up
+
+reth-down:
+	@(docker compose -f docker-compose-reth.yml down)
+.PHONY: reth-down

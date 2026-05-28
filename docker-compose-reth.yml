@@ -1,11 +1,24 @@
+# Manta Sepolia replica using op-reth + op-node (AltDA) + op-alt-da (Celestia).
+#
+# Prerequisites:
+#   export L1_RPC_URL=<your-ethereum-sepolia-rpc>
+#   # Optional: L1_BEACON_URL if not using OP_NODE_L1_BEACON_IGNORE
+#
+# Datadir (recommended): restore from the Reth snapshot before first start:
+#   https://constellationlabs-dashboard-beta.s3.amazonaws.com/bedrock-manta-sepolia-reth-2026-May-14.tar
+#
+# Start:
+#   docker compose -f docker-compose-reth.yml up -d
+#
+# See README.md for op-alt-da Celestia configuration.
+
 volumes:
-  reth_data:
   op_log:
-  reth_logs:
 
 services:
-  l2testnet:
-    image: us-docker.pkg.dev/oplabs-tools-artifacts/images/op-reth:v1.11.3
+  op-reth:
+    image: public.ecr.aws/i6b2w2n6/op-reth:v2.2.3
+    platform: linux/amd64
     restart: always
     ports:
       - "0.0.0.0:${OP_RETH_METRICS_PORT:-19001}:9001"
@@ -15,59 +28,75 @@ services:
       - "0.0.0.0:${OP_RETH_WS_PORT:-18546}:8546"
       - "0.0.0.0:${OP_RETH_ENGINE_PORT:-18551}:8551"
     volumes:
-      - "${PWD}/reth_data:/db"
-      - reth_logs:/root/logs
-      - "${PWD}/jwt-secret.txt:/root/jwt/jwt.hex:ro"
-      - "${PWD}/genesis.json:/chainspec/genesis.json:ro"
+      - "${PWD}/reth_data:/root/datadir"
+      - "${PWD}/jwt-secret.txt:/config/jwt.txt:ro"
+      - "${PWD}/genesis.json:/config/genesisReth.json:ro"
     command: >
       node
-      --engine.disable-parallel-sparse-trie
+      --datadir=/root/datadir
       --rollup.disable-tx-pool-gossip
-      --rollup.sequencer="https://manta-sepolia.rpc.caldera.xyz/http"
-      --rollup.historicalrpc="https://manta-sepolia.rpc.caldera.xyz/http"
-      --datadir /db
-      --chain /chainspec/genesis.json
-      --metrics 0.0.0.0:9001
-      --log.file.directory /root/logs
-      --authrpc.addr 0.0.0.0
-      --authrpc.port 8551
-      --authrpc.jwtsecret /root/jwt/jwt.hex
+      --rollup.sequencer=https://manta-sepolia.rpc.caldera.xyz/http
+      --metrics=0.0.0.0:9001
+      --authrpc.addr=0.0.0.0
+      --authrpc.port=8551
+      --authrpc.jwtsecret=/config/jwt.txt
       --http
-      --http.addr 0.0.0.0
-      --http.port 8545
-      --http.api eth,net,web3,debug,txpool
-      --http.corsdomain *
+      --http.addr=0.0.0.0
+      --http.port=8545
+      --http.api=web3,debug,eth,txpool,net
+      --http.corsdomain=*
+      --discovery.port=30303
       --ws
-      --ws.addr 0.0.0.0
-      --ws.port 8546
-      --ws.origins *
+      --ws.addr=0.0.0.0
+      --ws.port=8546
+      --ws.origins=*
       --ipcdisable
-  op-node-testnet:
+      --engine.disable-state-cache
+      --chain=/config/genesisReth.json
+
+  op-alt-da:
+    image: public.ecr.aws/i6b2w2n6/op-alt-da:v0.15.0-11cc587
+    platform: linux/amd64
+    restart: always
+    ports:
+      - "0.0.0.0:${OP_ALTDA_PORT:-13100}:3100"
+      - "0.0.0.0:${OP_ALTDA_METRICS_PORT:-16060}:6060"
+    volumes:
+      - "${PWD}/op-alt-da-config.toml:/config.toml:ro"
+    command:
+      - --config
+      - /config.toml
+    environment:
+      AWS_REGION: ${AWS_REGION:-us-west-2}
+      OP_ALTDA_CONFIG: /config.toml
+      OP_ALTDA_CELESTIA_NAMESPACE: "00000000000000000000000000000000000000ca1de12a38532b871dac"
+
+  op-node:
     depends_on:
-      - l2testnet
-    image: "public.ecr.aws/i6b2w2n6/op-node:1.16.1-celestia-e9ec322-legacy-eth"
+      - op-reth
+      - op-alt-da
+    image: public.ecr.aws/i6b2w2n6/op-node:1.16.1-celestia-e9ec322-altda
     platform: linux/amd64
     stop_signal: SIGINT
     stop_grace_period: 30s
     restart: always
     environment:
+      OP_NODE_L1_BEACON: ${L1_BEACON_URL:-}
       OP_NODE_L1_BEACON_IGNORE: "true"
-      OP_NODE_S3_REGION: us-west-2
-      OP_NODE_S3_BUCKET: caldera-celestia-cache-staging
-      OP_NODE_NAMESPACE_ID: "ca1de12a38532b871dac"
       OP_NODE_OVERRIDE_CANYON: "1726610400"
       OP_NODE_OVERRIDE_DELTA: "1726610400"
       OP_NODE_OVERRIDE_ECOTONE: "1726610400"
       OP_NODE_OVERRIDE_PECTRABLOBSCHEDULE: "1758812611"
-      CELESTIA_LEGACY_MODE: "true"
-      CELESTIA_DA_RPC: "${CELESTIA_DA_RPC}"
-      CELESTIA_NAMESPACE_ID: "${CELESTIA_NAMESPACE_ID:-ca1de12a38532b871dac}"
-      CELESTIA_AUTH_TOKEN: "${CELESTIA_AUTH_TOKEN}"
+      OP_NODE_ALTDA_ENABLED: "true"
+      OP_NODE_ALTDA_DA_SERVER: "http://op-alt-da:3100"
+      OP_NODE_ALTDA_DA_SERVICE: "true"
+      OP_NODE_ALTDA_VERIFY_ON_READ: "true"
     command: >
       op-node
       --l1="${L1_RPC_URL}"
-      --l2=http://l2testnet:8551
+      --l2=http://op-reth:8551
       --l2.jwt-secret=/config/jwt-secret.txt
+      --l2.enginekind=reth
       --sequencer.enabled=false
       --verifier.l1-confs=10
       --rollup.config=/rollup.json
@@ -86,7 +115,6 @@ services:
       --metrics.port=7300
       --pprof.enabled
       --rpc.enable-admin
-      --l2.enginekind=reth
     ports:
       - "${OP_NODE_RPC_HOST_PORT:-27545}:8545"
       - "${OP_NODE_P2P_HOST_PORT:-29003}:9003"
@@ -94,5 +122,5 @@ services:
     volumes:
       - "${PWD}/p2p-node-key.txt:/config/p2p-node-key.txt"
       - "${PWD}/jwt-secret.txt:/config/jwt-secret.txt"
-      - "${PWD}/rollup.json:/rollup.json"
+      - "${PWD}/rollup.json:/rollup.json:ro"
       - op_log:/op_log

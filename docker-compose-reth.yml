@@ -91,6 +91,10 @@ services:
       OP_NODE_ALTDA_DA_SERVER: "http://op-alt-da:3100"
       OP_NODE_ALTDA_DA_SERVICE: "true"
       OP_NODE_ALTDA_VERIFY_ON_READ: "true"
+      OP_NODE_OVERRIDE_FJORD: "1784295036"
+      OP_NODE_OVERRIDE_GRANITE: "1784298636"
+      OP_NODE_OVERRIDE_HOLOCENE: "1784302236"
+      OP_NODE_OVERRIDE_ISTHMUS: "1784305836"
     command: >
       op-node
       --l1="${L1_RPC_URL}"

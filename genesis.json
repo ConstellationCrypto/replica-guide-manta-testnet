@@ -19,6 +19,10 @@
         "regolithTime": 0,
         "canyonTime": 1726610400,
         "ecotoneTime": 1726610400,
+        "fjordTime": 1784295036,
+        "graniteTime": 1784298636,
+        "holoceneTime": 1784302236,
+        "isthmusTime": 1784305836,
         "terminalTotalDifficulty": 0,
         "terminalTotalDifficultyPassed": true,
         "optimism": {

@@ -8,6 +8,8 @@ op-reth replica (AltDA) using [docker-compose.yml](docker-compose.yml) with:
 
 Celestia namespace: `ca1de12a2f7443cbfbb5` (29-byte v0 form in config: `00000000000000000000000000000000000000ca1de12a2f7443cbfbb5`).
 
+op-reth peers with Caldera's replica over execution-layer p2p (`--trusted-peers` in [docker-compose.yml](docker-compose.yml), port `30303`). op-node peers with it over `--p2p.static` (port `9003`). Both directions need outbound TCP from the host.
+
 ## Datadir snapshot (recommended)
 
 Download and extract into `./datadir` before the first start:

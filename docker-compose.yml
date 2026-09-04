@@ -45,7 +45,8 @@ services:
       --http.port=8545
       --http.api=web3,debug,eth,txpool,net
       --http.corsdomain=*
-      --discovery.port=30303
+      --disable-discovery
+      --trusted-peers=enode://ca965bbc0cfce267ed50a8b03dd394a448f39ff234810f1256044f6825a5b5b4b85ef258914bd6671217e8efcae54ed38d73a52d439f860989172c625d16d492@52.39.67.200:30303
       --ws
       --ws.addr=0.0.0.0
       --ws.port=8546
@@ -101,6 +102,7 @@ services:
       --l2=http://op-reth:8551
       --l2.jwt-secret=/config/jwt-secret.txt
       --l2.enginekind=reth
+      --syncmode=execution-layer
       --sequencer.enabled=false
       --verifier.l1-confs=10
       --rollup.config=/rollup.json

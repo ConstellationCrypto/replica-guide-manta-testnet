@@ -21,7 +21,7 @@ idle_timeout = "60s"
 # ==============================================================================
 
 [celestia]
-namespace = "00000000000000000000000000000000000000ca1de12a38532b871dac"
+namespace = "00000000000000000000000000000000000000ca1de12a2f7443cbfbb5"
 blobid_compact = true
 
 # Bridge node (reads only)
@@ -70,7 +70,7 @@ provider = "s3"
 
 [fallback.s3]
 bucket = "caldera-celestia-cache-staging"
-prefix = "00000000000000000000000000000000000000ca1de12a38532b871dac"
+prefix = "00000000000000000000000000000000000000ca1de12a2f7443cbfbb5"
 endpoint = ""
 region = "us-west-2"
 credential_type = "anonymous"

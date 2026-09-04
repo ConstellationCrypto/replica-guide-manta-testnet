@@ -2,45 +2,30 @@
 
 set -eu
 
-export L1_RPC_URL=
+if [ -f .env ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
 
-L2_URL="http://localhost:8545"
-OP_NODE="$PWD/op-node"
+if [ -z "${L1_RPC_URL:-}" ]; then
+  echo "Set L1_RPC_URL in the environment or in .env (see .env.example)." >&2
+  exit 1
+fi
 
-# Helper method that waits for a given URL to be up. Can't use
-# cURL's built-in retry logic because connection reset errors
-# are ignored unless you're using a very recent version of cURL
-function wait_up {
-  echo -n "Waiting for $1 to come up..."
-  i=0
-  until curl -s -f -o /dev/null "$1"
-  do
-    echo -n .
-    sleep 0.25
+export L1_RPC_URL
 
-    ((i=i+1))
-    if [ "$i" -eq 300 ]; then
-      echo " Timeout!" >&2
-      exit 1
-    fi
-  done
-  echo "Done!"
-}
+if [ ! -f jwt-secret.txt ]; then
+  openssl rand -hex 32 > jwt-secret.txt
+fi
 
-openssl rand -hex 32 &> jwt-secret.txt
-openssl rand -hex 32 &> p2p-node-key.txt
+if [ ! -f p2p-node-key.txt ]; then
+  openssl rand -hex 32 > p2p-node-key.txt
+fi
 
-# Bring up L2.
-(
-  echo "Bringing up L2..."
-  docker-compose -f docker-compose.yml up -d l2
-  wait_up $L2_URL
-)
+echo "Bringing up Manta Sepolia replica (op-reth + AltDA)..."
+docker compose up -d
 
-# Bring up everything else.
-(
-  echo "Bringing up L2 services..."
-  docker-compose up -d op-node
-)
-
-echo "L2 ready."
+echo "L2 RPC:             http://localhost:${OP_RETH_RPC_PORT:-8545}"
+echo "op-node rollup RPC: http://localhost:${OP_NODE_RPC_HOST_PORT:-7545}"

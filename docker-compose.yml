@@ -52,7 +52,6 @@ services:
       --ws.port=8546
       --ws.origins=*
       --ipcdisable
-      --engine.disable-state-cache
       --chain=/config/genesis.json
 
   op-alt-da:

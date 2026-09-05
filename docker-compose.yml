@@ -1,68 +1,120 @@
-version: '3.4'
+# Manta Sepolia replica using op-reth + op-node (AltDA) + op-alt-da (Celestia).
+#
+# Prerequisites:
+#   export L1_RPC_URL=<your-ethereum-sepolia-rpc>
+#   # Optional: L1_BEACON_URL if not using OP_NODE_L1_BEACON_IGNORE
+#
+# Datadir (recommended): restore from the snapshot before first start:
+#   https://constellationlabs-dashboard-beta.s3.amazonaws.com/bedrock-manta-sepolia-reth-2026-May-14.tar
+#
+# Start:
+#   bash ./up.sh   (generates jwt-secret.txt and p2p-node-key.txt if missing)
+#
+# See README.md for op-alt-da Celestia configuration.
 
 volumes:
-  l1_data:
-  l2_data:
   op_log:
 
 services:
-  l2:
-    build:
-      context: .
-      dockerfile: Dockerfile.l2
+  op-reth:
+    image: public.ecr.aws/i6b2w2n6/op-reth:v2.3.1
     platform: linux/amd64
     restart: always
     ports:
-      - "8545:8545"
-      - "8060:6060"
+      - "0.0.0.0:${OP_RETH_METRICS_PORT:-9001}:9001"
+      - "0.0.0.0:${OP_RETH_DISCOVERY_PORT:-30303}:30303/tcp"
+      - "0.0.0.0:${OP_RETH_DISCOVERY_PORT:-30303}:30303/udp"
+      - "0.0.0.0:${OP_RETH_RPC_PORT:-8545}:8545"
+      - "0.0.0.0:${OP_RETH_WS_PORT:-8546}:8546"
+      - "0.0.0.0:${OP_RETH_ENGINE_PORT:-8551}:8551"
     volumes:
-      - "${PWD}/datadir:/db"
-      - "${PWD}/genesis.json:/genesis.json"
-      - "${PWD}/jwt-secret.txt:/config/test-jwt-secret.txt"
-    entrypoint:
-      - "/bin/sh"
-      - "/entrypoint.sh"
-      - "--rollup.sequencerhttp=https://manta-sepolia.rpc.caldera.xyz/http"
-      - "--authrpc.jwtsecret=/config/test-jwt-secret.txt"
+      - "${PWD}/datadir:/root/datadir"
+      - "${PWD}/jwt-secret.txt:/config/jwt.txt:ro"
+      - "${PWD}/genesis.json:/config/genesis.json:ro"
+    command: >
+      node
+      --datadir=/root/datadir
+      --rollup.disable-tx-pool-gossip
+      --rollup.sequencer=https://manta-sepolia.rpc.caldera.xyz/http
+      --metrics=0.0.0.0:9001
+      --authrpc.addr=0.0.0.0
+      --authrpc.port=8551
+      --authrpc.jwtsecret=/config/jwt.txt
+      --http
+      --http.addr=0.0.0.0
+      --http.port=8545
+      --http.api=web3,debug,eth,txpool,net
+      --http.corsdomain=*
+      --disable-discovery
+      --trusted-peers=enode://ca965bbc0cfce267ed50a8b03dd394a448f39ff234810f1256044f6825a5b5b4b85ef258914bd6671217e8efcae54ed38d73a52d439f860989172c625d16d492@52.39.67.200:30303
+      --ws
+      --ws.addr=0.0.0.0
+      --ws.port=8546
+      --ws.origins=*
+      --ipcdisable
+      --chain=/config/genesis.json
+
+  op-alt-da:
+    image: public.ecr.aws/i6b2w2n6/op-alt-da:v0.15.0-11cc587
+    platform: linux/amd64
+    restart: always
+    ports:
+      - "0.0.0.0:${OP_ALTDA_PORT:-3100}:3100"
+      - "0.0.0.0:${OP_ALTDA_METRICS_PORT:-6060}:6060"
+    volumes:
+      - "${PWD}/op-alt-da-config.toml:/config.toml:ro"
+    command:
+      - --config
+      - /config.toml
+    environment:
+      AWS_REGION: ${AWS_REGION:-us-west-2}
+      OP_ALTDA_CONFIG: /config.toml
+      OP_ALTDA_CELESTIA_NAMESPACE: "00000000000000000000000000000000000000ca1de12a2f7443cbfbb5"
 
   op-node:
     depends_on:
-      - l2
-    image: "public.ecr.aws/i6b2w2n6/op-node:6.2.0"
+      - op-reth
+      - op-alt-da
+    image: public.ecr.aws/i6b2w2n6/op-node:1.16.1-celestia-e9ec322-altda
     platform: linux/amd64
     stop_signal: SIGINT
     stop_grace_period: 30s
+    restart: always
     environment:
+      # Rosetta miscomputes AVX2 ChaCha20-Poly1305; breaks every libp2p noise handshake on Apple Silicon
+      GODEBUG: cpu.avx2=off
+      OP_NODE_L1_BEACON: ${L1_BEACON_URL:-}
       OP_NODE_L1_BEACON_IGNORE: "true"
-      OP_NODE_S3_REGION: us-west-2
-      OP_NODE_S3_BUCKET: caldera-celestia-cache-staging
-      OP_NODE_NAMESPACE_ID: ca1de12a38532b871dac
-      CELESTIA_LEGACY_MODE: "true"
-      OP_NODE_OVERRIDE_CANYON: '1726610400'
-      OP_NODE_OVERRIDE_DELTA: '1726610400'
-      OP_NODE_OVERRIDE_ECOTONE: '1726610400'
-      OP_NODE_OVERRIDE_PECTRABLOBSCHEDULE: '1758812611'
+      OP_NODE_OVERRIDE_CANYON: "1726610400"
+      OP_NODE_OVERRIDE_DELTA: "1726610400"
+      OP_NODE_OVERRIDE_ECOTONE: "1726610400"
+      OP_NODE_OVERRIDE_PECTRABLOBSCHEDULE: "1758812611"
+      OP_NODE_ALTDA_ENABLED: "true"
+      OP_NODE_ALTDA_DA_SERVER: "http://op-alt-da:3100"
+      OP_NODE_ALTDA_DA_SERVICE: "true"
+      OP_NODE_ALTDA_VERIFY_ON_READ: "true"
       OP_NODE_OVERRIDE_FJORD: "1784295036"
       OP_NODE_OVERRIDE_GRANITE: "1784298636"
       OP_NODE_OVERRIDE_HOLOCENE: "1784302236"
       OP_NODE_OVERRIDE_ISTHMUS: "1784305836"
-
-    restart: always
     command: >
       op-node
       --l1="${L1_RPC_URL}"
-      --l2=http://l2:8551
-      --l2.jwt-secret=/config/test-jwt-secret.txt 
+      --l2=http://op-reth:8551
+      --l2.jwt-secret=/config/jwt-secret.txt
+      --l2.enginekind=reth
+      --syncmode=execution-layer
       --sequencer.enabled=false
       --verifier.l1-confs=10
       --rollup.config=/rollup.json
       --rpc.addr=0.0.0.0
       --rpc.port=8545
+      --p2p.disable=false
       --p2p.no-discovery=false
       --p2p.listen.ip=0.0.0.0
       --p2p.listen.tcp=9003
       --p2p.listen.udp=9003
-      --p2p.static=/ip4/44.228.205.55/tcp/9003/p2p/16Uiu2HAm69zVG5PnBkprySUU8y8UWaXKs2iTkwQJ6Gs3jnrFHe6t
+      --p2p.static=/ip4/44.228.205.55/tcp/9003/p2p/16Uiu2HAm1yyHgvkvdwQDJs7qNYGgPLNSAmWNtCSqR6t4CTZcmtez
       --snapshotlog.file=/op_log/snapshot.log
       --p2p.priv.path=/config/p2p-node-key.txt
       --metrics.enabled
@@ -71,12 +123,11 @@ services:
       --pprof.enabled
       --rpc.enable-admin
     ports:
-      - "7545:8545"
-      - "9003:9003"
-      - "7300:7300"
-      - "6060:6060"
+      - "${OP_NODE_RPC_HOST_PORT:-7545}:8545"
+      - "${OP_NODE_P2P_HOST_PORT:-9003}:9003"
+      - "${OP_NODE_METRICS_HOST_PORT:-7300}:7300"
     volumes:
       - "${PWD}/p2p-node-key.txt:/config/p2p-node-key.txt"
-      - "${PWD}/jwt-secret.txt:/config/test-jwt-secret.txt"
-      - "${PWD}/rollup.json:/rollup.json"
+      - "${PWD}/jwt-secret.txt:/config/jwt-secret.txt"
+      - "${PWD}/rollup.json:/rollup.json:ro"
       - op_log:/op_log

@@ -1,0 +1,4 @@
+.env
+datadir/
+jwt-secret.txt
+p2p-node-key.txt

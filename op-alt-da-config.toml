@@ -2,7 +2,7 @@
 # Stateless DA Server Configuration (Manta Sepolia replica)
 # ==============================================================================
 #
-# Read-only replica: bridge + S3 fallback only (no blob submission / no signer).
+# Read-only replica: reads from Celestia when a bridge is configured, else from the S3 cache. No submission, no signer.
 # See https://github.com/celestiaorg/op-alt-da
 #
 # ==============================================================================
@@ -21,13 +21,14 @@ idle_timeout = "60s"
 # ==============================================================================
 
 [celestia]
-namespace = "00000000000000000000000000000000000000ca1de12a38532b871dac"
+namespace = "00000000000000000000000000000000000000ca1de12a2f7443cbfbb5"
 blobid_compact = true
 
-# Bridge node (reads only)
-bridge_addr = "https://serene-restless-sponge.celestia-mocha.quiknode.pro/REPLACE"
-bridge_auth_token = "REPLACE"
-bridge_tls_enabled = true
+# Optional. Leave unset to read from the S3 cache below (recommended).
+# To read from Celestia directly, set an ARCHIVAL Mocha node RPC and its auth token. A pruned node returns "not found" for old blobs and op-alt-da does not fall back to S3 on not-found.
+# bridge_addr = "https://your-celestia-mocha-node.example"
+# bridge_auth_token = ""
+# bridge_tls_enabled = true
 
 # Omit core_grpc_* for read-only — no signer / KMS / keyring required.
 # core_grpc_addr = ""
@@ -70,7 +71,7 @@ provider = "s3"
 
 [fallback.s3]
 bucket = "caldera-celestia-cache-staging"
-prefix = "00000000000000000000000000000000000000ca1de12a38532b871dac"
+prefix = "00000000000000000000000000000000000000ca1de12a2f7443cbfbb5"
 endpoint = ""
 region = "us-west-2"
 credential_type = "anonymous"

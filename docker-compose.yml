@@ -81,6 +81,8 @@ services:
     stop_grace_period: 30s
     restart: always
     environment:
+      # Rosetta miscomputes AVX2 ChaCha20-Poly1305; breaks every libp2p noise handshake on Apple Silicon
+      GODEBUG: cpu.avx2=off
       OP_NODE_L1_BEACON: ${L1_BEACON_URL:-}
       OP_NODE_L1_BEACON_IGNORE: "true"
       OP_NODE_OVERRIDE_CANYON: "1726610400"
